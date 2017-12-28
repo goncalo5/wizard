@@ -6,13 +6,18 @@ SETTING_FILE_NAME = "settings.json"
 ANIMALS_FILE_NAME = "animals.json"
 
 ANSWERS = {
-    "en": {"yes": 1, "y": 1, "no": 0, "n": 0, "pass": 2, "p": 2, "dont know": 2, "dk": 2},
-    "pt": {"sim": 1, "s": 1, "nao": 0, "n": 0, "passar": 2, "p": 2, "nao sei": 2, "ns": 2}
+    "en": {"yes": 1, "y": 1, "no": 0, "n": 0, "pass": 2, "p": 2},
+    "pt": {"sim": 1, "s": 1, "nao": 0, "n": 0, "passar": 2, "p": 2}
+}
+
+ANSWERS_TO_PRINT = {
+    "en": "(y)es   (n)o   (p)ass",
+    "pt": "(s)im   (n)ao   (p)assar"
 }
 
 characteristics = {
-    "en": set(["fly", "vertebrate", "insect", "carnivorous"]),
-    "pt": set(["voa", "vertebrado", "inseto", "carnivoro"])}
+    "en": ["fly", "vertebrate", "insect", "carnivorous"],
+    "pt": ["voa", "vertebrado"]}#, "inseto", "carnivoro"])}
 
 animals = {
     "bird": {"fly", "vertebrate"},
@@ -22,6 +27,7 @@ animals = {
     "fly": {"fly"}
     }
 
+
 class Settings(object):
     def __init__(self, settings_dict):
         # convert dictionary to object
@@ -30,7 +36,6 @@ class Settings(object):
         except KeyError:
             # language not yet was chosen
             self.choose_the_language()
-
 
     def choose_the_language(self):
         for language in characteristics:
@@ -78,25 +83,6 @@ class FileHandler(object):
         print "%s saved" % json_file_name
 
 
-def make_new_dict(animal_dict, characteristic, positve=True):
-    new_dict = {}
-    for animal in animal_dict:
-        # print animal
-        if characteristic in animal_dict[animal] and positve:
-            new_dict[animal] = animal_dict[animal]
-        elif characteristic not in animal_dict[animal] and not positve:
-            new_dict[animal] = animal_dict[animal]
-    return new_dict
-
-
-def fetch_all_characteristic(animals):
-    all_characteristic = set()
-    for animal_characteristic in animals.values():
-        # print animal_characteristic
-        all_characteristic = all_characteristic.union(animal_characteristic)
-    return all_characteristic
-
-
 class Animals(object):
     def __init__(self, settings, animals_dict):
         self.language = settings.language
@@ -105,36 +91,44 @@ class Animals(object):
         except KeyError:
             a = {self.language: {}}
         self.dict = animals_dict
+        # print 4, self.dict
         self.characteristics = characteristics[self.language]
 
         print self.dict
         while len(self.dict) < 2:
             msg = {
-                "en": "there are less than 2 animals in that language, please insert some animal",
-                "pt": "ha menos de 2 animais nessa lingua, por favor insere um animal"}
+                "en": "there are less than 2 animals, please insert some animal",
+                "pt": "ha menos de 2 animais, por favor insere um animal"}
             print msg[self.language]
             self.add_animal()
+            # print 5, self.dict
 
     def add_animal(self):
         input_msg = {
             "en": "what is the name of the animal?  ",
             "pt": "qual e o nome do animal?  "}
         new_animal_name = raw_input(input_msg[self.language])
-        characteristics_of_new_animal = set()
+        # print 8, new_animal_name
+        characteristics_of_new_animal = []
         for characteristic in self.characteristics:
             print characteristic
-            input_msg = {
-                "en": "this animal have that characteristic?  ",
-                "pt": "esse animal tem essa caracteristica?  "}
+            input_msg_all_languages = {
+                "en": "this animal have that characteristic",
+                "pt": "esse animal tem essa caracteristica"}
+            input_msg = "%s (%s) ?  " % (input_msg_all_languages[self.language], ANSWERS_TO_PRINT[self.language])
             while True:
-                answer = raw_input(input_msg[self.language])
-                if answer in ANSWERS[self.language]:
-                    break
+                answer = raw_input(input_msg)
+                if answer not in ANSWERS[self.language]:
+                    msg = {
+                        "en": "there are less than 2 animals in that language, please insert some animal",
+                        "pt": "nao percebi essa resposta, por favor insere "}
+                    continuo
+                break
             if ANSWERS[self.language][answer] == 1:
-                characteristics_of_new_animal.update([characteristic])
-
-
-        self.dict[new_animal_name] = characteristics
+                characteristics_of_new_animal.append(characteristic)
+        # print 6, self.dict, 9, new_animal_name, 10, characteristics_of_new_animal
+        self.dict[new_animal_name] = characteristics_of_new_animal
+        # print 7, self.dict
 
     def add_characteristic(animal_name, characteristics):
         try:
@@ -144,6 +138,23 @@ class Animals(object):
 
     def change_language(self, new_language):
         pass
+
+    def make_new_dict(self, animal_dict, characteristic, positve=True):
+        new_dict = {}
+        for animal in animal_dict:
+            # print 1, animal
+            if characteristic in animal_dict[animal] and positve:
+                new_dict[animal] = animal_dict[animal]
+            elif characteristic not in animal_dict[animal] and not positve:
+                new_dict[animal] = animal_dict[animal]
+        return new_dict
+
+    def fetch_all_characteristic(self, animals):
+        all_characteristic = set()
+        for animal_characteristic in animals.values():
+            # print animal_characteristic
+            all_characteristic = all_characteristic.union(animal_characteristic)
+        return all_characteristic
 
 
 class Run(object):
@@ -155,20 +166,9 @@ class Run(object):
         self.settings = Settings(settings_dict)
         f.save_json_file(SETTING_FILE_NAME, self.settings.__dict__)
 
-        # try:
-        #     a = animals_dict[self.settings.language]
-        # except KeyError:
-        #     msg = {
-        #         "en": "there are no animal in that language, please insert some animal",
-        #         "pt": "nao ha nenhum animal nessa lingua, por favor insere um animal"}
-        #     print msg[self.settings.language]
-        #     self
-
         self.animals = Animals(self.settings, animals_dict)
         print self.animals, self.animals.characteristics
 
-
-        # all_characteristic = fetch_all_characteristic(animals)
         for characteristic in self.animals.characteristics:
             question = "{} ? ".format(characteristic)
             answer = raw_input(question).lower()
@@ -176,11 +176,14 @@ class Run(object):
                 print "\nplease insert [y]es or [n]o"
                 answer = raw_input(question)
             answer = True if answer == "y" else False
-            animals = make_new_dict(animals, characteristic, answer)
-            # print animals
+            # print 3, self.animals.dict
+            animals = self.animals.make_new_dict(self.animals.dict, characteristic, answer)
+            # print 2, animals
             if len(animals) < 2:
                 break
         print animals.keys()
+        f.save_json_file(ANIMALS_FILE_NAME, self.animals.dict)
+
 
 if __name__ == '__main__':
     Run()
