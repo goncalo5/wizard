@@ -17,14 +17,14 @@ ANSWERS_TO_PRINT = {
 
 characteristics = {
     "en": ["fly", "vertebrate", "insect", "carnivorous"],
-    "pt": ["voa", "vertebrado"]}#, "inseto", "carnivoro"])}
+    "pt": ["voador", "vertebrado"]}#, "inseto", "carnivoro"])}
 
 animals = {
-    "bird": {"fly", "vertebrate"},
-    "ant": {"insect"},
-    "lion": {"vertebrate", "carnivorous"},
-    "elephant": {"vertebrate"},
-    "fly": {"fly"}
+    "bird": {"fly": 1, "vertebrate": 1},
+    "ant": {"insect": 1},
+    "lion": {"vertebrate": 1, "carnivorous": 1},
+    "elephant": {"vertebrate": 1},
+    "fly": {"fly": 1}
     }
 
 
@@ -58,9 +58,9 @@ class FileHandler(object):
 
     def try_open_json_file(self, json_file_name):
         try:
-            print "try open the json file ..."
+            # print "try open the json file ..."
             content = self.open_json_file(json_file_name)
-            print "json file %s open with sucess" % json_file_name
+            # print "json file %s open with sucess" % json_file_name
         except IOError:
             content = self.create_a_new_file_from_scrath(json_file_name)
         return content
@@ -71,16 +71,29 @@ class FileHandler(object):
         return d
 
     def create_a_new_file_from_scrath(self, json_file_name):
-        print "\ncreate a new file from scrath"
+        # print "\ncreate a new file from scrath"
         content = {}
         self.save_json_file(json_file_name, content)
         return content
 
     def save_json_file(self, json_file_name, content):
-        print "saving %s ..." % json_file_name
+        # print "saving %s ..." % json_file_name
         f = open(json_file_name, "w")
         json.dump(content, f)
-        print "%s saved" % json_file_name
+        # print "%s saved" % json_file_name
+
+
+class CommonFunctions(object):
+    @staticmethod
+    def check_bool_answer(answer, language):
+        if answer in ANSWERS[language]:
+            res = ANSWERS[language][answer]
+            return res  # return 0 or 1 or 2
+        else:
+            msg = {
+                "en": "I don't get your answer, please insert",
+                "pt": "nao percebi essa resposta, por favor insere"}
+            print "%s %s" % (msg[language], ANSWERS_TO_PRINT[language])
 
 
 class Animals(object):
@@ -108,33 +121,31 @@ class Animals(object):
             "en": "what is the name of the animal?  ",
             "pt": "qual e o nome do animal?  "}
         new_animal_name = raw_input(input_msg[self.language])
+        self.dict[new_animal_name] = {}
+        input_msg = {
+            "en": "please, insert some characteristic, the %s is?  " % new_animal_name,
+            "pt": "por favor insere alguma caracteristica, o/a %s e'?  " % new_animal_name}
+        self.fetch_all_characteristic()
+        print self.characteristics
+        if len(self.characteristics) < 1:
+            new_characteristic_name = raw_input(input_msg[self.language])
+            self.add_characteristic(new_animal_name, {new_characteristic_name: 1})
+        else:
+            for animal in self.dict:
+                if self.dict[animal] == self.dict[new_animal_name]
         # print 8, new_animal_name
-        characteristics_of_new_animal = []
-        for characteristic in self.characteristics:
-            print characteristic
-            input_msg_all_languages = {
-                "en": "this animal have that characteristic",
-                "pt": "esse animal tem essa caracteristica"}
-            input_msg = "%s (%s) ?  " % (input_msg_all_languages[self.language], ANSWERS_TO_PRINT[self.language])
-            while True:
-                answer = raw_input(input_msg)
-                if answer not in ANSWERS[self.language]:
-                    msg = {
-                        "en": "there are less than 2 animals in that language, please insert some animal",
-                        "pt": "nao percebi essa resposta, por favor insere "}
-                    continuo
-                break
-            if ANSWERS[self.language][answer] == 1:
-                characteristics_of_new_animal.append(characteristic)
-        # print 6, self.dict, 9, new_animal_name, 10, characteristics_of_new_animal
-        self.dict[new_animal_name] = characteristics_of_new_animal
-        # print 7, self.dict
 
-    def add_characteristic(animal_name, characteristics):
-        try:
-            self.dict[animal_name].update(characteristics)
-        except TypeError:
-            self.dict[animal_name].update([characteristics])
+        # print 6, self.dict, 9, new_animal_name, 10, characteristics_of_new_animal
+
+        print 7, self.dict
+
+    def add_characteristic(self, animal_name, characteristics):
+        print self.dict
+        self.dict[animal_name].update(characteristics)
+
+    def check_if_there_are_animals_with_same_characteristics(self):
+        for animal in self.dict:
+
 
     def change_language(self, new_language):
         pass
@@ -149,12 +160,26 @@ class Animals(object):
                 new_dict[animal] = animal_dict[animal]
         return new_dict
 
-    def fetch_all_characteristic(self, animals):
-        all_characteristic = set()
-        for animal_characteristic in animals.values():
-            # print animal_characteristic
-            all_characteristic = all_characteristic.union(animal_characteristic)
-        return all_characteristic
+    def fetch_all_characteristic(self):
+        self.characteristics = {}
+        for animal in self.dict:
+            for characteristic in self.dict[animal]:
+                if characteristic not in self.characteristics:
+                    self.characteristics[characteristic] = [0, 0]
+                y_n = self.dict[animal][characteristic]
+                self.characteristics[characteristic][y_n] += 1
+
+    def choose_the_best_question(self):
+        n = float(len(self.dict))
+        # min_close2mid: 0 - 0.5
+        # where 0 is the best which reduce 50% of the options and 0.5 is the worst which don't reduce nothing
+        min_close2mid = 0.5
+        for characteristic in self.characteristics:
+            print 5, characteristic
+            close2mid = min(abs(float(self.characteristics[characteristic][0]) / n), abs(float(self.characteristics[characteristic][1]) / n))
+            if close2mid < min_close2mid:
+                min_close2mid = close2mid
+                self.best_question = characteristic
 
 
 class Run(object):
@@ -169,20 +194,71 @@ class Run(object):
         self.animals = Animals(self.settings, animals_dict)
         print self.animals, self.animals.characteristics
 
-        for characteristic in self.animals.characteristics:
-            question = "{} ? ".format(characteristic)
-            answer = raw_input(question).lower()
-            while answer not in ["y", "n"]:
-                print "\nplease insert [y]es or [n]o"
-                answer = raw_input(question)
-            answer = True if answer == "y" else False
-            # print 3, self.animals.dict
-            animals = self.animals.make_new_dict(self.animals.dict, characteristic, answer)
-            # print 2, animals
-            if len(animals) < 2:
-                break
-        print animals.keys()
+        self.all_answers = {}
+        animals_left = self.check_all_characteristics()
+        if len(animals_left) == 1:
+            print animals_left
+            if self.check_if_is_the_animal() == 0:
+                self.add_new_animal()
+        elif len(animals_left) == 0:
+            self.add_new_animal()
         f.save_json_file(ANIMALS_FILE_NAME, self.animals.dict)
+
+    def check_all_characteristics(self):
+        all_possible_animals = self.animals.dict.keys()
+        for characteristic in self.animals.characteristics:
+            input_msg_all_languages = {
+                "en": "the animal have the characteristic %s?" % characteristic,
+                "pt": "o animal e' %s?" % characteristic}
+            input_msg = "%s (%s)   " % (input_msg_all_languages[self.settings.language], ANSWERS_TO_PRINT[self.settings.language])
+            while True:
+                answer = CommonFunctions.check_bool_answer(raw_input(input_msg), self.settings.language)
+                if answer is not None:
+                    self.all_answers[characteristic] = answer
+                    break
+            print self.all_answers
+
+            print 3, self.animals.dict
+            for animal in self.animals.dict:
+                if animal not in all_possible_animals:
+                    continue
+                print 4, animal, all_possible_animals
+                if self.animals.dict[animal][characteristic] != answer:
+                    all_possible_animals.remove(animal)
+                if len(all_possible_animals) < 2:
+                    return all_possible_animals
+        return all_possible_animals
+
+    def check_if_is_the_animal(self):
+        input_msg_all_languages = {
+            "en": "was this the animal you were thinking?",
+            "pt": "era esse o animal que estavas a pensar?"}
+        input_msg = "%s (%s)   " % (input_msg_all_languages[self.settings.language], ANSWERS_TO_PRINT[self.settings.language])
+        while True:
+            answer = CommonFunctions.check_bool_answer(raw_input(input_msg), self.settings.language)
+            if answer is not None:
+                return answer
+
+    def add_new_animal(self):
+        input_msg_all_languages = {
+            "en": "what is the animal you were thinking?",
+            "pt": "qual era o animal que estavas a pensar?"}
+        input_msg = "%s   " % (input_msg_all_languages[self.settings.language])
+        name_of_the_new_animal = raw_input(input_msg)
+        for characteristic in self.animals.characteristics:
+            if characteristic not in self.all_answers:
+                input_msg_all_languages = {
+                    "en": "the animal have the characteristic %s?" % characteristic,
+                    "pt": "o animal e' %s?" % characteristic}
+                input_msg = "%s (%s)   " % (input_msg_all_languages[self.settings.language], ANSWERS_TO_PRINT[self.settings.language])
+                while True:
+                    answer = CommonFunctions.check_bool_answer(raw_input(input_msg), self.settings.language)
+                    if answer is not None:
+                        self.all_answers[characteristic] = answer
+                        break
+                print self.all_answers
+        self.animals.dict[name_of_the_new_animal] = self.all_answers
+
 
 
 if __name__ == '__main__':
